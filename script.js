@@ -335,14 +335,13 @@ let currentPage = 1; // Halaman yang sedang aktif saat ini
 
 // Function to add comment
 function addComment(name, email, message) {
-    const commentsContainer = document.getElementById('comments-container');
-
-    // Simpan dulu ke localStorage
+    // Simpan ke localStorage
     saveComment(name, email, message);
 
-    // Setelah tambah komen baru, kita paksa kembali ke Halaman 1
-    // supaya user bisa melihat komen barunya di paling atas
+    // Reset ke halaman 1 setelah menambah comment baru
     currentPage = 1;
+    
+    // Reload tampilan comments dengan pagination
     loadComments(); 
 }
 
@@ -358,12 +357,6 @@ function saveComment(name, email, message) {
     };
 
     comments.unshift(comment); // Tambah ke urutan pertama
-
-    // Opsional: Jika kamu mau menyimpan LEBIH DARI 50 agar pagination berguna,
-    // kamu bisa menghapus atau memperbesar limit slice ini.
-    // if (comments.length > 50) {
-    //     comments = comments.slice(0, 50);
-    // }
 
     localStorage.setItem('sakti-comments', JSON.stringify(comments));
 }
@@ -422,7 +415,7 @@ function loadComments() {
         commentsContainer.appendChild(commentDiv);
     });
 
-    // 4. Render Tombol Pagination
+    // 4. Render Tombol Pagination (hanya jika ada lebih dari 1 halaman)
     if (totalPages > 1) {
         renderPaginationButtons(totalPages, paginationContainer);
     }
@@ -471,65 +464,8 @@ function renderPaginationButtons(totalPages, container) {
     }
 }
 
-// Function to save comment to localStorage
-function saveComment(name, email, message) {
-    let comments = JSON.parse(localStorage.getItem('sakti-comments')) || [];
-
-    const comment = {
-        name: name,
-        email: email,
-        message: message,
-        date: new Date().toISOString()
-    };
-
-    comments.unshift(comment);
-
-    if (comments.length > 50) {
-        comments = comments.slice(0, 50);
-    }
-
-    localStorage.setItem('sakti-comments', JSON.stringify(comments));
-}
-
-// Function to load comments from localStorage
-function loadComments() {
-    const comments = JSON.parse(localStorage.getItem('sakti-comments')) || [];
-    const commentsContainer = document.getElementById('comments-container');
-
-    if (comments.length === 0) {
-        commentsContainer.innerHTML = '<p class="no-comments">Jadilah yang pertama memberikan feedback!</p>';
-        return;
-    }
-
-    commentsContainer.innerHTML = '';
-
-    comments.forEach(comment => {
-        const commentDiv = document.createElement('div');
-        commentDiv.className = 'comment-item';
-
-        const date = new Date(comment.date);
-        const dateStr = date.toLocaleDateString('id-ID', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        commentDiv.innerHTML = `
-            <div class="comment-name">${comment.name}</div>
-            <div class="comment-date">${dateStr}</div>
-            <div class="comment-text">${comment.message}</div>
-        `;
-
-        commentsContainer.appendChild(commentDiv);
-    });
-}
-
 // ==================== EVENT LISTENER UNTUK .read-more ====================
 // Menangani klik tombol "Baca Selengkapnya"
-// Tombol dengan href eksternal (http/https) akan membuka link normal
-// Tombol internal atau dengan kelas khusus diperlakukan berbeda jika diperlukan
 document.querySelectorAll('.read-more').forEach(btn => {
     btn.addEventListener('click', (e) => {
         const href = btn.getAttribute('href');
