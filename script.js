@@ -174,6 +174,76 @@ const abkData = {
     }
 };
 
+// ==================== JOURNAL & ARTICLE LINKS ====================
+const journalLinks = {
+    'tuna-rungu': {
+        jurnalUrl: 'https://e-journal.lp2m.uinjambi.ac.id/ojp/index.php/jdsr/article/view/1764',
+        jurnalLabel: 'Penerapan Bahasa Isyarat dalam Pembelajaran Anak Tuna Rungu'
+    },
+    'bahasa-isyarat': {
+        jurnalUrl: 'https://id.hesperian.org/hhg/Helping_Children_Who_Are_Deaf:Mengajarkan_bahasa_isyarat_kepada_orangtua_anak-anak_tunarungu',
+        jurnalLabel: 'Mengajarkan Bahasa Isyarat kepada Orang Tua Anak Tunarungu'
+    },
+    'autisme': {
+        jurnalUrl: 'https://doi.org/10.1002/aur.1329',
+        jurnalLabel: 'Tager-Flusberg & Kasari (2013) - Minimally Verbal School-Aged Children with ASD'
+    },
+    'adhd': {
+        jurnalUrl: 'https://www.psychiatry.org/psychiatrists/practice/dsm',
+        jurnalLabel: 'DSM-5: Diagnostic and Statistical Manual of Mental Disorders'
+    },
+    'disleksia': {
+        jurnalUrl: 'https://doi.org/10.1111/1471-3802.00040',
+        jurnalLabel: 'Snowling, M. J. (2013) - Early Identification and Interventions for Dyslexia'
+    },
+    'speech-delay': {
+        jurnalUrl: 'https://journal.unpar.ac.id/index.php/unpargraduate/article/view/846',
+        jurnalLabel: 'Speech Therapy and Language Development in Children'
+    },
+    'down-syndrome': {
+        jurnalUrl: 'http://jtwb.org/index.php/jtwb/article/view/1',
+        jurnalLabel: 'Hubungan Perkembangan Bahasa dengan Kemampuan Sosial Anak Down Syndrome'
+    },
+    'tunagrahita': {
+        jurnalUrl: 'https://e-journal.unmas.ac.id/index.php/jsp/article/view/392',
+        jurnalLabel: 'Strategi Pembelajaran untuk Anak Tunagrahita di Lingkungan Inklusif'
+    }
+};
+
+// Artikel umum kesehatan mental orang tua
+const artikelUmum = {
+    url: 'https://qqmitraananda.com/berita/detail/menjadi-kuat-untuk-anak-istimewa-self-care-bagi-orang-tua-anak-berkebutuhan-khusus-abk-6',
+    label: 'Kesehatan Mental Orang Tua & Self-Care'
+};
+
+// Fungsi untuk render journal section
+function renderJournalSection(categoryKey) {
+    const links = journalLinks[categoryKey];
+    const journalContainer = document.getElementById('journal-links-container');
+
+    if (!journalContainer || !links) return;
+
+    journalContainer.innerHTML = `
+        <div class="journal-links-wrapper">
+            <div class="journal-item">
+                <h4>📚 Jurnal Online</h4>
+                <p>${links.jurnalLabel}</p>
+                <a href="${links.jurnalUrl}" target="_blank" rel="noopener noreferrer" class="journal-btn">
+                    Baca Jurnal →
+                </a>
+            </div>
+            <div class="journal-item">
+                <h4>💙 Artikel Kesehatan Mental</h4>
+                <p>${artikelUmum.label}</p>
+                <a href="${artikelUmum.url}" target="_blank" rel="noopener noreferrer" class="journal-btn">
+                    Baca Artikel →
+                </a>
+            </div>
+        </div>
+    `;
+}
+
+
 // Combined function: Show ABK Info AND Filter Journal
 function showABKAndJournal(category) {
     const abkInfoContainer = document.getElementById('abk-info');
@@ -257,34 +327,148 @@ document.addEventListener('DOMContentLoaded', () => {
     loadComments();
 });
 
+// ==================== LOGIKA KOMENTAR & PAGINATION ====================
+
+// Konfigurasi Pagination
+const ITEMS_PER_PAGE = 3; // Menampilkan 3 feedback per halaman
+let currentPage = 1; // Halaman yang sedang aktif saat ini
+
 // Function to add comment
 function addComment(name, email, message) {
     const commentsContainer = document.getElementById('comments-container');
 
-    const commentDiv = document.createElement('div');
-    commentDiv.className = 'comment-item';
+    // Simpan dulu ke localStorage
+    saveComment(name, email, message);
 
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('id-ID', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+    // Setelah tambah komen baru, kita paksa kembali ke Halaman 1
+    // supaya user bisa melihat komen barunya di paling atas
+    currentPage = 1;
+    loadComments(); 
+}
+
+// Function to save comment to localStorage
+function saveComment(name, email, message) {
+    let comments = JSON.parse(localStorage.getItem('sakti-comments')) || [];
+
+    const comment = {
+        name: name,
+        email: email,
+        message: message,
+        date: new Date().toISOString()
+    };
+
+    comments.unshift(comment); // Tambah ke urutan pertama
+
+    // Opsional: Jika kamu mau menyimpan LEBIH DARI 50 agar pagination berguna,
+    // kamu bisa menghapus atau memperbesar limit slice ini.
+    // if (comments.length > 50) {
+    //     comments = comments.slice(0, 50);
+    // }
+
+    localStorage.setItem('sakti-comments', JSON.stringify(comments));
+}
+
+// Function to load comments from localStorage (DENGAN PAGINATION)
+function loadComments() {
+    const comments = JSON.parse(localStorage.getItem('sakti-comments')) || [];
+    const commentsContainer = document.getElementById('comments-container');
+    const paginationContainer = document.getElementById('pagination');
+
+    commentsContainer.innerHTML = '';
+    paginationContainer.innerHTML = '';
+
+    if (comments.length === 0) {
+        commentsContainer.innerHTML = '<p class="no-comments">Jadilah yang pertama memberikan feedback!</p>';
+        return;
+    }
+
+    // 1. Hitung total halaman
+    const totalPages = Math.ceil(comments.length / ITEMS_PER_PAGE);
+
+    // Validasi currentPage agar tidak out of bound
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    // 2. Tentukan index awal dan akhir untuk slicing array
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    
+    // Ambil hanya data yang sesuai halaman
+    const commentsToShow = comments.slice(startIndex, endIndex);
+
+    // 3. Render Comments (Looping data yang sudah dipotong)
+    commentsToShow.forEach(comment => {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment-item';
+        
+        // Animasi fade in sederhana
+        commentDiv.style.animation = 'fadeIn 0.5s';
+
+        const date = new Date(comment.date);
+        const dateStr = date.toLocaleDateString('id-ID', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        commentDiv.innerHTML = `
+            <div class="comment-name">${comment.name}</div>
+            <div class="comment-date">${dateStr}</div>
+            <div class="comment-text">${comment.message}</div>
+        `;
+
+        commentsContainer.appendChild(commentDiv);
     });
 
-    commentDiv.innerHTML = `
-        <div class="comment-name">${name}</div>
-        <div class="comment-date">${dateStr}</div>
-        <div class="comment-text">${message}</div>
-    `;
-
-    if (commentsContainer.querySelector('.no-comments')) {
-        commentsContainer.innerHTML = '';
+    // 4. Render Tombol Pagination
+    if (totalPages > 1) {
+        renderPaginationButtons(totalPages, paginationContainer);
     }
-    commentsContainer.insertBefore(commentDiv, commentsContainer.firstChild);
+}
 
-    saveComment(name, email, message);
+// Fungsi Khusus Membuat Tombol Pagination
+function renderPaginationButtons(totalPages, container) {
+    // Tombol Previous
+    if (currentPage > 1) {
+        const prevBtn = document.createElement('button');
+        prevBtn.innerText = '←';
+        prevBtn.className = 'page-btn';
+        prevBtn.onclick = () => {
+            currentPage--;
+            loadComments();
+            // Scroll sedikit ke atas agar user nyaman melihat list baru
+            document.getElementById('feedback-list').scrollIntoView({ behavior: 'smooth' });
+        };
+        container.appendChild(prevBtn);
+    }
+
+    // Tombol Angka Halaman
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = i;
+        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+        btn.onclick = () => {
+            currentPage = i;
+            loadComments();
+            document.getElementById('feedback-list').scrollIntoView({ behavior: 'smooth' });
+        };
+        container.appendChild(btn);
+    }
+
+    // Tombol Next
+    if (currentPage < totalPages) {
+        const nextBtn = document.createElement('button');
+        nextBtn.innerText = '→';
+        nextBtn.className = 'page-btn';
+        nextBtn.onclick = () => {
+            currentPage++;
+            loadComments();
+            document.getElementById('feedback-list').scrollIntoView({ behavior: 'smooth' });
+        };
+        container.appendChild(nextBtn);
+    }
 }
 
 // Function to save comment to localStorage
@@ -341,3 +525,23 @@ function loadComments() {
         commentsContainer.appendChild(commentDiv);
     });
 }
+
+// ==================== EVENT LISTENER UNTUK .read-more ====================
+// Menangani klik tombol "Baca Selengkapnya"
+// Tombol dengan href eksternal (http/https) akan membuka link normal
+// Tombol internal atau dengan kelas khusus diperlakukan berbeda jika diperlukan
+document.querySelectorAll('.read-more').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const href = btn.getAttribute('href');
+        const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
+
+        // Jika link eksternal, biarkan browser mengikuti href secara normal
+        if (isExternal) {
+            return;
+        }
+
+        // Jika link internal (anchor), cegah default dan buat logika internal jika perlu
+        e.preventDefault();
+        // Logika internal dapat ditambahkan di sini jika diperlukan
+    });
+});
